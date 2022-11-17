@@ -1,0 +1,219 @@
+library(shiny)
+library(shinyWidgets)
+library(tableHTML)
+
+
+
+#Data input
+keystone_trails <- read.csv(file = '/Users/annatracz/Desktop/ski_recommender/keystone_trail_data.csv')
+copper_trails <- read.csv(file = '/Users/annatracz/Desktop/ski_recommender/copper_trail_data.csv')
+arapahoe_trails <- read.csv(file = '/Users/annatracz/Desktop/ski_recommender/arapahoe_trail_data.csv')
+
+
+
+
+
+ui <- fluidPage(
+tags$style(make_css(list("table",'background-color','white'))),
+mainPanel(align="center",
+tags$h1("Ski Run Recommender"),
+  setBackgroundImage(
+    src = "https://img.freepik.com/free-photo/beautiful-skiing-area-volda-norway_181624-54365.jpg?w=1380&t=st=1668380889~exp=1668381489~hmac=00f328a62685d5279097e2e886785da3e53ddd989e6cfd6af5cc1cad1ca39ab5"
+  ),
+numericInput("num", label = h4("How many recommendations would you like?"), value = 5, width= "600px"),
+tags$h4("Choose runs that you liked from any of these resorts:"),
+  multiInput(
+    inputId = "resort1", label = "Keystone",
+    choices = keystone_trails$trailName,
+    width = "600px", 
+    options = list(
+      enable_search = TRUE,
+      non_selected_header = "Choose between:",
+      selected_header = "You have selected:"
+    )
+  ),
+  multiInput(
+    inputId = "resort2", label = "Copper Mountain",
+    choices = copper_trails$trailName,
+    width = "600px", 
+    options = list(
+      enable_search = TRUE,
+      non_selected_header = "Choose between:",
+      selected_header = "You have selected:"
+    )
+  ),
+  multiInput(
+    inputId = "resort3", label = "Arapahoe Basin",
+    choices = arapahoe_trails$trailName,
+    width = "600px", 
+    options = list(
+      enable_search = TRUE,
+      non_selected_header = "Choose between:",
+      selected_header = "You have selected:"
+    )
+  ),
+
+  actionButton("submit", "Recommend"),
+  tableOutput("dataTableOut"), 
+  width=24)
+)#end of ui
+
+
+
+
+
+
+
+server <- function(input, output,session) {
+v <- reactiveValues()
+  datasetInput <- reactive({
+    perm.vector <- as.vector(c(input$resort1,input$resort2,input$resort3))
+    perm.vector
+  })
+  output$textOut <- renderText({
+    input$submit # makes sure nothing moves till the button is hit
+    # isolate prevents datasetInput from reactively evaluating
+    isolate(datasetInput()) 
+  })
+  output$dataTableOut <- renderTable({
+    if (input$submit==0){ return(NULL)}
+    else{
+	input$submit
+        isolate(df <- data.frame(inputs = datasetInput()))
+
+    ##RECOMMENDER MODEL BEGINS
+
+	important_characteristics <- c("trailName","topElevation","verticalRise","slopeLength","averageWidth","slopeArea","averageGrade","maxGrade","abilityLevel")
+	#keystone dataframe
+	keystone_trail_cf <- as.data.frame(keystone_trails)
+	keystone_trail_df = keystone_trail_cf[important_characteristics] #trimming df to only contain the important info
+
+	#copper dataframe
+	copper_trail_cf <- as.data.frame(copper_trails)
+	copper_trail_df = copper_trail_cf[important_characteristics] #trimming df to only contain the important info
+ 
+	#arapahoe dataframe
+	arapahoe_trail_cf <- as.data.frame(arapahoe_trails)
+	arapahoe_trail_df = arapahoe_trail_cf[important_characteristics] #trimming df to only contain the important info
+ 
+
+	#creating column for resort name
+	keystone_trail_df$resortName <- "Keystone"
+	copper_trail_df$resortName <- "Copper Mountain"
+	arapahoe_trail_df$resortName <- "Arapahoe Basin"
+ 
+	#combining into one big data frame
+	alltrails <- rbind(keystone_trail_df, copper_trail_df, arapahoe_trail_df)
+	num_of_trails <- nrow(alltrails)
+	trail_df <- alltrails
+	user_preference <- data.frame(trail_df$trailName,0)
+	index_of_ratings <- which(user_preference$trail_df%in%df[,1])
+	user_preference[index_of_ratings,2] <-1
+
+
+
+	#CREATE A TRAIL MATRIX WITH EACH COLUMN AS A POSSIBLE CHARACTERISTIC
+	trails_matrix <-matrix(0,num_of_trails,24) #empty matrix
+	trail_characteristic_list <- c("Low Top Elevation","Medium Top Elevation", "High Top Elevation", "Small Vertical Rise", "Medium Vertical Rise", "Big Vertical Rise", "Short Slope", "Medium Slope", "Long Slope", "Narrow", "Medium Width", "Wide", "Small Area", "Medium Area", "Large Area", "Small Average Grade", "Medium Average Grade", "Large Average Grade", "Small Max Grade", "Medium Max Grade", "Large Max Grade", "Novice", "Intermediate", "Expert")
+
+	colnames(trails_matrix) <- trail_characteristic_list #set column names to characteristic list
+	#CLEAN UP DATA FOR USE
+	#removing commas
+	for(c in 2:6){
+	trail_df[,c] <- gsub(',','',as.character(trail_df[,c]))
+	}
+	#removing percentages
+	for(p in 7:8){
+	trail_df[,p] <- gsub('%','',as.character(trail_df[,p]))
+	}
+
+	#convert to integers
+	trail_df[,2:8]<-lapply(trail_df[,2:8],as.numeric)
+	#TRAIL MATRIX - give characteristic 1 if trail has it or move to the next characteristic
+	#could possibly add other ability levels if I add switch case with all 0s and "adv inter" at end, and add two extra cols to matrix
+	for(i in 1:num_of_trails){
+		k=1
+		for(j in 2:9){
+		A<-switch(j,0,10000,500,1000,100,10,10,20,"Novice")
+		B<-switch(j,0,11000,1000,5000,200,20,20,30,"Intermediate") 
+		C<-switch(j,0,11001,1001,5001,201,21,21,31,"Expert") 
+			if(j==9 && trail_df[i,j]==A||trail_df[i,j]=="Beginner"){
+				trails_matrix[i,k]=1
+			}
+			else if(j!=9 && trail_df[i,j]<=A){
+				trails_matrix[i,k]=1
+
+			}
+			k <- k+1
+			if(j==9 && (trail_df[i,j]==B||trail_df[i,j]=="Low Intermediate"||trail_df[i,j]=="Advanced Intermediate")){
+				trails_matrix[i,k]=1
+			}
+			else if(j!=9 && trail_df[i,j]>A && trail_df[i,j]<=B){
+				trails_matrix[i,k]=1
+			}
+			k <- k+1
+			if(j==9 && trail_df[i,j]==C){
+				trails_matrix[i,k]=1
+			}
+			else if(j!=9 && trail_df[i,j]>=C){
+				trails_matrix[i,k]=1
+			}
+			k <- k+1
+		}
+	}
+	#USER PROFILE MATRIX
+	result = matrix(0,24,1)
+
+	#calculate dot product of trails matrix and user preference
+	for(r in 1:ncol(trails_matrix)){
+		result[r,1]=sum((trails_matrix[,r])*(user_preference[,2]))
+	}
+
+	#convert to binary
+	for(r in 1:nrow(result)){
+		if (result[r,1] <= 0){
+	    		result[r,1] <- 0
+ 	 }
+ 	 else {
+   	 result[r,1] <- 1
+ 	 }
+	}
+
+	#user's profile
+	user_result <- result[,1]
+	similarity_matrix <- rbind.data.frame(user_result,trails_matrix)
+	library(proxy)
+	#SIMILARITY MATRIX
+	#high score = less similar 
+	sim_results <- dist(similarity_matrix, method = "Jaccard")
+	sim_results <- as.data.frame(as.matrix(sim_results[1:num_of_trails]))
+
+	#putting similarities in increasing order
+	indexes <- (1:num_of_trails)
+	sim_results$new_col <- indexes
+
+	#shuffle so that the trails are not in order of ski resort
+	sim_results<- sim_results[sample(1:nrow(sim_results)), ]
+
+	ordered_sim_results <- sim_results[order(sim_results[,1],decreasing=FALSE),]	#increasing order of score
+
+	#removing the trails that were chosen by user
+	userinput = which(user_preference[,2]==1)
+	usertrailchoices <- subset(ordered_sim_results, ordered_sim_results[,2] %in% userinput)
+	library(dplyr)
+	ord_sim_final <- anti_join(ordered_sim_results, usertrailchoices)
+	
+
+	#FINAL RESULT
+	#letting the user choose how many recommendations they want
+	rows <- ord_sim_final[1:input$num,]$new_col
+	alltrails[rows,]
+
+    ##RECOMMENDER MODEL ENDS
+
+    }#end of else
+  })#end of renderTable
+
+}#end of server
+
+shinyApp(ui, server)
