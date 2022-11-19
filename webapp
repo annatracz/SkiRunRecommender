@@ -2,10 +2,15 @@ library(shiny)
 library(shinyWidgets)
 library(tableHTML)
 
+
+
 #Data input
 keystone_trails <- read.csv(file = '/Users/annatracz/Desktop/ski_recommender/keystone_trail_data.csv')
 copper_trails <- read.csv(file = '/Users/annatracz/Desktop/ski_recommender/copper_trail_data.csv')
 arapahoe_trails <- read.csv(file = '/Users/annatracz/Desktop/ski_recommender/arapahoe_trail_data.csv')
+
+
+
 
 
 ui <- fluidPage(
@@ -52,6 +57,9 @@ tags$h4("Choose runs that you liked from any of these resorts:"),
   tableOutput("dataTableOut"), 
   width=24)
 )#end of ui
+
+
+
 
 
 
@@ -197,7 +205,11 @@ v <- reactiveValues()
 
 	#FINAL RESULT
 	rows <- ord_sim_final[1:input$num,]$new_col
-	alltrails[rows,]
+	finaldf <- alltrails[rows,] 
+
+	final_headers <- c("Trail Name","Top Elevation (ft)","Vertical Rise (ft)","Slope Length (ft)","Average Width (ft)","Slope Area (acres)","Average Grade (%)","Maximum Grade (%)","Ability Level", "Resort Name")
+	colnames(finaldf)<- final_headers
+	finaldf
 
     ##RECOMMENDER MODEL ENDS
 
