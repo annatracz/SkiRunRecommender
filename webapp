@@ -2,15 +2,10 @@ library(shiny)
 library(shinyWidgets)
 library(tableHTML)
 
-
-
 #Data input
 keystone_trails <- read.csv(file = '/Users/annatracz/Desktop/ski_recommender/keystone_trail_data.csv')
 copper_trails <- read.csv(file = '/Users/annatracz/Desktop/ski_recommender/copper_trail_data.csv')
 arapahoe_trails <- read.csv(file = '/Users/annatracz/Desktop/ski_recommender/arapahoe_trail_data.csv')
-
-
-
 
 
 ui <- fluidPage(
@@ -57,9 +52,6 @@ tags$h4("Choose runs that you liked from any of these resorts:"),
   tableOutput("dataTableOut"), 
   width=24)
 )#end of ui
-
-
-
 
 
 
