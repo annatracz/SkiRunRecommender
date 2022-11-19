@@ -130,7 +130,6 @@ v <- reactiveValues()
 	#convert to integers
 	trail_df[,2:8]<-lapply(trail_df[,2:8],as.numeric)
 	#TRAIL MATRIX - give characteristic 1 if trail has it or move to the next characteristic
-	#could possibly add other ability levels if I add switch case with all 0s and "adv inter" at end, and add two extra cols to matrix
 	for(i in 1:num_of_trails){
 		k=1
 		for(j in 2:9){
@@ -205,7 +204,6 @@ v <- reactiveValues()
 	
 
 	#FINAL RESULT
-	#letting the user choose how many recommendations they want
 	rows <- ord_sim_final[1:input$num,]$new_col
 	alltrails[rows,]
 
