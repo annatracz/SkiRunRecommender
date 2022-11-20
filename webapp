@@ -3,13 +3,10 @@ library(shinyWidgets)
 library(tableHTML)
 
 
-
 #Data input
 keystone_trails <- read.csv(file = '/Users/annatracz/Desktop/ski_recommender/keystone_trail_data.csv')
 copper_trails <- read.csv(file = '/Users/annatracz/Desktop/ski_recommender/copper_trail_data.csv')
 arapahoe_trails <- read.csv(file = '/Users/annatracz/Desktop/ski_recommender/arapahoe_trail_data.csv')
-
-
 
 
 
@@ -71,8 +68,7 @@ v <- reactiveValues()
     perm.vector
   })
   output$textOut <- renderText({
-    input$submit # makes sure nothing moves till the button is hit
-    # isolate prevents datasetInput from reactively evaluating
+    input$submit
     isolate(datasetInput()) 
   })
   output$dataTableOut <- renderTable({
@@ -96,7 +92,6 @@ v <- reactiveValues()
 	arapahoe_trail_cf <- as.data.frame(arapahoe_trails)
 	arapahoe_trail_df = arapahoe_trail_cf[important_characteristics] #trimming df to only contain the important info
  
-
 	#creating column for resort name
 	keystone_trail_df$resortName <- "Keystone"
 	copper_trail_df$resortName <- "Copper Mountain"
@@ -115,8 +110,8 @@ v <- reactiveValues()
 	#CREATE A TRAIL MATRIX WITH EACH COLUMN AS A POSSIBLE CHARACTERISTIC
 	trails_matrix <-matrix(0,num_of_trails,24) #empty matrix
 	trail_characteristic_list <- c("Low Top Elevation","Medium Top Elevation", "High Top Elevation", "Small Vertical Rise", "Medium Vertical Rise", "Big Vertical Rise", "Short Slope", "Medium Slope", "Long Slope", "Narrow", "Medium Width", "Wide", "Small Area", "Medium Area", "Large Area", "Small Average Grade", "Medium Average Grade", "Large Average Grade", "Small Max Grade", "Medium Max Grade", "Large Max Grade", "Novice", "Intermediate", "Expert")
-
 	colnames(trails_matrix) <- trail_characteristic_list #set column names to characteristic list
+	
 	#CLEAN UP DATA FOR USE
 	#removing commas
 	for(c in 2:6){
